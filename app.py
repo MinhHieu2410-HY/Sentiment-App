@@ -308,9 +308,10 @@ with st.sidebar:
     st.markdown(f"📝 Tổng: **{total}**")
 
     if total > 0:
-        if st.button("🗑️ Xóa lịch sử", use_container_width=True):
-            st.session_state.history = []
-            st.rerun()
+        st.button(
+            "🗑️ Xóa lịch sử",
+            use_container_width=True,
+            on_click=clear_history)
 
     st.markdown("---")
     st.caption("📚 DoAn_II — Product Review Sentiment Analysis")
