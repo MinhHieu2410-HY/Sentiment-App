@@ -330,16 +330,11 @@ if "Phân tích đơn lẻ" in page:
         key="review_input",
     )
     
-    def clear_text():
-    st.session_state["review_input"] = ""
-    
     col_btn, col_clear = st.columns([1, 4])
     analyze_btn = col_btn.button("🚀 Phân tích", type="primary", use_container_width=True)
-    col_clear.button(
-        "🔄 Xóa",
-        use_container_width=False,
-        on_click = clear_text
-    )
+    if col_clear.button("🔄 Xóa", use_container_width=False):
+        st.session_state["example_text"] = ""
+        st.rerun()
 
     word_count = len(review_text.split()) if review_text.strip() else 0
     st.caption(f"📝 {word_count} từ")
