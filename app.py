@@ -469,52 +469,62 @@ elif "Phân tích hàng loạt" in page:
         except UnicodeDecodeError:
             df_up = pd.read_csv(uploaded, encoding='latin1')
 
-        st.success(f"✅ Đã tải: **{len(df_up):,} dòng** × {df_up.shape[1]} cột")
-        st.dataframe(df_up.head(5), use_container_width=True)
+        if len(df_up) == 0:
+            st.warning("⚠️ File không có dữ liệu.")
+        else:
+            st.success(f"✅ Đã tải: **{len(df_up):,} dòng** × {df_up.shape[1]} cột")
+            st.dataframe(df_up.head(5), use_container_width=True)
 
-        # ── Column selector
-        text_cols = [c for c in df_up.columns
-                     if any(k in c.lower() for k in
-                            ['review','text','comment','content','feedback','description'])]
-        if not text_cols:
-            text_cols = list(df_up.columns)
+            # ── Column selector
+            text_cols = [c for c in df_up.columns
+                         if any(k in c.lower() for k in
+                                ['review','text','comment','content','feedback','description'])]
+            if not text_cols:
+                text_cols = list(df_up.columns)
 
-        selected_col = st.selectbox(
-            "🔤 Chọn cột chứa nội dung review:",
-            options=list(df_up.columns),
-            index=list(df_up.columns).index(text_cols[0]) if text_cols else 0,
-        )
+            selected_col = st.selectbox(
+                "🔤 Chọn cột chứa nội dung review:",
+                options=list(df_up.columns),
+                index=list(df_up.columns).index(text_cols[0]) if text_cols else 0,
+            )
 
-        max_rows = st.slider(
-            "⚙️ Số dòng tối đa xử lý:", 10, min(10_000, len(df_up)),
-            min(1_000, len(df_up)), step=100,
-        )
+            # ── Slider for max rows (fixed version)
+            max_rows_limit = len(df_up)
+            default_value = min(1000, max_rows_limit)
+            step = 100 if max_rows_limit >= 100 else 1
+            max_rows = st.slider(
+                "⚙️ Số dòng tối đa xử lý:",
+                min_value=1,
+                max_value=max_rows_limit,
+                value=default_value,
+                step=step,
+            )
 
-        if st.button("🚀 Bắt đầu phân tích", type="primary"):
-            df_proc = df_up[[selected_col]].dropna().head(max_rows).copy()
-            df_proc.columns = ["review"]
+            if st.button("🚀 Bắt đầu phân tích", type="primary"):
+                df_proc = df_up[[selected_col]].dropna().head(max_rows).copy()
+                df_proc.columns = ["review"]
 
-            progress = st.progress(0, "Đang xử lý…")
-            texts = df_proc["review"].tolist()
+                progress = st.progress(0, "Đang xử lý…")
+                texts = df_proc["review"].tolist()
 
-            # Process in chunks
-            chunk = 500
-            results = []
-            for i in range(0, len(texts), chunk):
-                batch = texts[i:i+chunk]
-                results.extend(predict_batch(batch, tfidf, model, le))
-                progress.progress(min((i + chunk) / len(texts), 1.0))
+                # Process in chunks
+                chunk = 500
+                results = []
+                for i in range(0, len(texts), chunk):
+                    batch = texts[i:i+chunk]
+                    results.extend(predict_batch(batch, tfidf, model, le))
+                    progress.progress(min((i + chunk) / len(texts), 1.0))
 
-            df_proc["sentiment"]   = [r[0] for r in results]
-            df_proc["confidence"]  = [round(r[1] * 100, 1) for r in results]
-            df_proc["emoji"]       = df_proc["sentiment"].map(SENTIMENT_EMOJI)
-            df_proc["label_vi"]    = df_proc["sentiment"].map(SENTIMENT_VI)
-            progress.empty()
+                df_proc["sentiment"]   = [r[0] for r in results]
+                df_proc["confidence"]  = [round(r[1] * 100, 1) for r in results]
+                df_proc["emoji"]       = df_proc["sentiment"].map(SENTIMENT_EMOJI)
+                df_proc["label_vi"]    = df_proc["sentiment"].map(SENTIMENT_VI)
+                progress.empty()
 
-            st.session_state.batch_results = df_proc
-            st.success(f"✅ Đã phân tích **{len(df_proc):,}** reviews!")
+                st.session_state.batch_results = df_proc
+                st.success(f"✅ Đã phân tích **{len(df_proc):,}** reviews!")
 
-    # ── Show batch results
+    # ── Show batch results (if any)
     if st.session_state.batch_results is not None:
         df_r = st.session_state.batch_results
         st.markdown("---")
