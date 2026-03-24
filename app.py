@@ -312,12 +312,6 @@ with st.sidebar:
             "🗑️ Xóa lịch sử",
             use_container_width=True,
             on_click=clear_history)
-
-    st.markdown("---")
-    st.caption("📚 DoAn_II — Product Review Sentiment Analysis")
-    st.caption("Model: Logistic Regression + TF-IDF")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE 1 — Single Review Analysis
 # ─────────────────────────────────────────────────────────────────────────────
@@ -330,7 +324,7 @@ if "Phân tích đơn lẻ" in page:
     # ── Input
     review_text = st.text_area(
         "✏️ Nhập review của bạn:",
-        value=default_text,
+        value="",
         height=140,
         placeholder="e.g. This product is absolutely amazing, I love it so much!",
         key="review_input",
@@ -338,9 +332,11 @@ if "Phân tích đơn lẻ" in page:
 
     col_btn, col_clear = st.columns([1, 4])
     analyze_btn = col_btn.button("🚀 Phân tích", type="primary", use_container_width=True)
-    if col_clear.button("🔄 Xóa", use_container_width=False):
-        st.session_state["example_text"] = ""
-        st.rerun()
+    col_clear.button(
+        "🔄 Xóa",
+        use_container_width=False,
+        on_click=clear_text
+    )
 
     word_count = len(review_text.split()) if review_text.strip() else 0
     st.caption(f"📝 {word_count} từ")
