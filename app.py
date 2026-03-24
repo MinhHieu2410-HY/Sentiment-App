@@ -276,6 +276,16 @@ if "history" not in st.session_state:
 if "batch_results" not in st.session_state:
     st.session_state.batch_results = None
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Helper functions
+# ─────────────────────────────────────────────────────────────────────────────
+def clear_history():
+    """Clear all analysis history."""
+    st.session_state.history = []
+
+def clear_review_input():
+    """Clear the text area input."""
+    st.session_state["review_input"] = ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Sidebar
@@ -310,8 +320,10 @@ with st.sidebar:
     if total > 0:
         st.button(
             "🗑️ Xóa lịch sử",
+            on_click=clear_history,
             use_container_width=True,
-            on_click=clear_history)
+        )
+
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE 1 — Single Review Analysis
 # ─────────────────────────────────────────────────────────────────────────────
@@ -319,11 +331,7 @@ if "Phân tích đơn lẻ" in page:
     st.markdown("# 🔍 Phân tích Cảm xúc Review")
     st.markdown("Nhập một đoạn review bằng **tiếng Anh** để phân tích cảm xúc.")
 
-    # Define a callback to clear the text area
-    def clear_review_input():
-        st.session_state["review_input"] = ""
-
-    # Text area bound to session state
+    # Text area with key and clear callback
     review_text = st.text_area(
         "✏️ Nhập review của bạn:",
         value="",
@@ -331,7 +339,7 @@ if "Phân tích đơn lẻ" in page:
         placeholder="e.g. This product is absolutely amazing, I love it so much!",
         key="review_input",
     )
-
+    
     col_btn, col_clear = st.columns([1, 4])
     analyze_btn = col_btn.button("🚀 Phân tích", type="primary", use_container_width=True)
     col_clear.button("🔄 Xóa", on_click=clear_review_input, use_container_width=False)
