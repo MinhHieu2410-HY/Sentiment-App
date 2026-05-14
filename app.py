@@ -32,11 +32,12 @@ st.set_page_config(
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
-MODEL_DIR  = "models"
-TFIDF_PATH = os.path.join(MODEL_DIR, "tfidf_vectorizer.joblib")
-MODEL_PATH = os.path.join(MODEL_DIR, "logistic_regression.joblib")
-LABEL_PATH = os.path.join(MODEL_DIR, "label_encoder.joblib")
-META_PATH  = os.path.join(MODEL_DIR, "model_meta.joblib")
+# Đặt các file .pkl cùng thư mục với app.py
+_BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
+TFIDF_PATH = os.path.join(_BASE_DIR, "tfidf_vectorizer.pkl")
+MODEL_PATH = os.path.join(_BASE_DIR, "best_sentiment_model.pkl")
+LABEL_PATH = os.path.join(_BASE_DIR, "label_encoder.pkl")
+META_PATH  = os.path.join(_BASE_DIR, "sentiment_model_final.pkl")
 
 SENTIMENT_COLORS = {
     "positive": "#2ecc71",
@@ -114,42 +115,75 @@ body { font-family: 'Segoe UI', sans-serif; }
 # ─────────────────────────────────────────────────────────────────────────────
 @st.cache_resource(show_spinner="⏳ Đang tải mô hình…")
 def load_model():
-    """Load TF-IDF + LR + LabelEncoder. Auto-create demo if not found."""
-    if not os.path.exists(MODEL_PATH):
-        from create_demo_model import build_demo_model
-        build_demo_model()
+    """Load TF-IDF + LinearSVC + LabelEncoder từ các file .pkl."""
+    missing = [p for p in [TFIDF_PATH, MODEL_PATH, LABEL_PATH] if not os.path.exists(p)]
+    if missing:
+        st.error(
+            "Không tìm thấy file: " + ", ".join(missing) +
+            "\nHãy đặt các file .pkl cùng thư mục với app.py."
+        )
+        st.stop()
 
     tfidf = joblib.load(TFIDF_PATH)
     model = joblib.load(MODEL_PATH)
     le    = joblib.load(LABEL_PATH)
-    meta  = joblib.load(META_PATH) if os.path.exists(META_PATH) else {}
+
+    # Đọc metadata từ sentiment_model_final.pkl nếu có
+    meta = {}
+    if os.path.exists(META_PATH):
+        raw = joblib.load(META_PATH)
+        if isinstance(raw, dict):
+            meta = {k: v for k, v in raw.items()
+                    if isinstance(v, (str, int, float, bool))}
+        meta.setdefault("is_demo", False)
+
     return tfidf, model, le, meta
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Inference helpers
 # ─────────────────────────────────────────────────────────────────────────────
+def _softmax(x: np.ndarray) -> np.ndarray:
+    """Chuyển decision scores sang xác suất bằng softmax."""
+    e = np.exp(x - np.max(x, axis=-1, keepdims=True))
+    return e / e.sum(axis=-1, keepdims=True)
+
+
 def predict_single(text: str, tfidf, model, le):
-    """Return (label, confidence_dict)."""
+    """Return (label_str, confidence_dict).
+    Hỗ trợ cả LinearSVC (decision_function) lẫn model có predict_proba.
+    """
     processed = preprocess_text(text)
     if not processed.strip():
         return "neutral", {"positive": 0.33, "neutral": 0.34, "negative": 0.33}
+
     vec = tfidf.transform([processed])
-    proba = model.predict_proba(vec)[0]
-    classes = le.classes_
-    conf_dict = {cls: float(prob) for cls, prob in zip(classes, proba)}
-    label = classes[np.argmax(proba)]
+
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(vec)[0]
+    else:
+        scores = model.decision_function(vec)[0]
+        proba  = _softmax(scores)
+
+    classes   = le.classes_   # ['negative', 'neutral', 'positive']
+    conf_dict = {cls: float(p) for cls, p in zip(classes, proba)}
+    label     = classes[np.argmax(proba)]
     return label, conf_dict
 
 
 def predict_batch(texts: list, tfidf, model, le) -> list:
     """Return list of (label, confidence) tuples."""
     processed = [preprocess_text(t) for t in texts]
-    # replace empty with placeholder
     processed = [p if p.strip() else "unknown" for p in processed]
-    vec   = tfidf.transform(processed)
-    proba = model.predict_proba(vec)
-    preds = le.inverse_transform(np.argmax(proba, axis=1))
+    vec = tfidf.transform(processed)
+
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba(vec)
+    else:
+        scores = model.decision_function(vec)
+        proba  = _softmax(scores)
+
+    preds = le.classes_[np.argmax(proba, axis=1)]
     confs = np.max(proba, axis=1)
     return list(zip(preds, confs))
 
