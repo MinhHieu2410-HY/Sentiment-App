@@ -116,7 +116,6 @@ body { font-family: 'Segoe UI', sans-serif; }
 def load_model():
     """Load TF-IDF + LR + LabelEncoder. Auto-create demo if not found."""
     if not os.path.exists(MODEL_PATH):
-        st.warning("⚠️  Model chưa tồn tại — đang tạo demo model…")
         from create_demo_model import build_demo_model
         build_demo_model()
 
