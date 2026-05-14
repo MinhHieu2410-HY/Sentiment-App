@@ -32,12 +32,13 @@ st.set_page_config(
 # ─────────────────────────────────────────────────────────────────────────────
 # Constants
 # ─────────────────────────────────────────────────────────────────────────────
-# Đặt các file .pkl cùng thư mục với app.py
+# Các file .pkl nằm trong thư mục models/ (cùng cấp với app.py)
 _BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
-TFIDF_PATH = os.path.join(_BASE_DIR, "tfidf_vectorizer.pkl")
-MODEL_PATH = os.path.join(_BASE_DIR, "best_sentiment_model.pkl")
-LABEL_PATH = os.path.join(_BASE_DIR, "label_encoder.pkl")
-META_PATH  = os.path.join(_BASE_DIR, "sentiment_model_final.pkl")
+MODEL_DIR  = os.path.join(_BASE_DIR, "models")
+TFIDF_PATH = os.path.join(MODEL_DIR, "tfidf_vectorizer.pkl")
+MODEL_PATH = os.path.join(MODEL_DIR, "best_sentiment_model.pkl")
+LABEL_PATH = os.path.join(MODEL_DIR, "label_encoder.pkl")
+META_PATH  = os.path.join(MODEL_DIR, "sentiment_model_final.pkl")
 
 SENTIMENT_COLORS = {
     "positive": "#2ecc71",
